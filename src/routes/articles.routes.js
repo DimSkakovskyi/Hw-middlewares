@@ -10,13 +10,11 @@ const {
   deleteArticleById
 } = require("../controllers/articles.controller");
 
-router.use(requireArticleAccess);
-
 router.get("/", getArticles);
-router.post("/", postArticles);
-
 router.get("/:articleId", validateIdParam("articleId"), getArticleById);
-router.put("/:articleId", validateIdParam("articleId"), putArticleById);
-router.delete("/:articleId", validateIdParam("articleId"), deleteArticleById);
+
+router.post("/", requireArticleAccess, postArticles);
+router.put("/:articleId", requireArticleAccess, validateIdParam("articleId"), putArticleById);
+router.delete("/:articleId", requireArticleAccess, validateIdParam("articleId"), deleteArticleById);
 
 module.exports = router;

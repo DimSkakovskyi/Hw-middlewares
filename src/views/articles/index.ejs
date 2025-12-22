@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="uk">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>
+    <%= title %>
+  </title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+  <div class="container">
+    <h1>Articles</h1>
+    <p class="subtitle">Список статей (EJS)</p>
+
+    <% if (!articles || articles.length===0) { %>
+      <p>Немає статей для відображення.</p>
+      <% } else { %>
+        <ul class="list">
+          <% articles.forEach(a=> { %>
+            <li class="list-item">
+              <a href="/articles/<%= a.id %>">
+                <%= a.title %> (id: <%= a.id %>)
+              </a>
+            </li>
+            <% }) %>
+        </ul>
+        <% } %>
+
+          <div class="nav">
+            <a class="btn" href="/">На головну</a>
+            <a class="btn" href="/users">До користувачів</a>
+          </div>
+  </div>
+</body>
+
+</html>

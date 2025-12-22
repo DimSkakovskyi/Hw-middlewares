@@ -1,14 +1,10 @@
-# Middlewares project
+# PUG + EJS
 
-## Опис проєкту
+Навчальний сервер на **Node.js + Express.js** p шаблонізаторами:
 
-Це навчальний сервер на **Node.js + Express.js**, доповнений **middleware** для:
-
-- логування запитів
-- обробки помилок (404 + global error handler)
-- базової аутентифікації (для users)
-- валідації даних (для users)
-- перевірки прав доступу (для articles)
+- **PUG** для сторінок користувачів: `/users`, `/users/:userId`
+- **EJS** для сторінок статей: `/articles`, `/articles/:articleId`
+- Статичні файли (CSS) через `express.static`
 
 Сервер слухає порт **3000** (або `process.env.PORT`, якщо заданий).
 
@@ -35,107 +31,85 @@ npm run dev
 Після запуску сервер доступний за адресою:
 http://localhost:3000
 
-## Опис маршрутів сервера
+## 1) Users pages (PUG)
 
----
+### 1.1 `GET /users`
 
-### 1) Root
+- **Призначення:** відобразити список користувачів у вигляді HTML сторінки.
+- **Template engine:** PUG
+- **View:** `src/views/users/index.pug`
+- **Controller:** `getUsers`
+- **Render:**
 
-#### GET `/`
+```js
+return res.status(200).render("users/index.pug", {
+  title: "Users",
+  users,
+});
+```
 
-- **Призначення:** перевірка роботи сервера (головний маршрут).
-- **Middleware:** `logRequests` (логування запитів).
-- **Відповідь (200):** `Get root route`
+**Що бачить користувач у браузері:**
 
----
+- заголовок Users
+- список користувачів (username + id)
+- посилання на сторінку деталей /users/:userId
+- **Приклад URL:** http://localhost:3000/users
 
-### 2) Users
+### 1.2 GET `/users/:userId`
 
-> Для всіх маршрутів `/users` та `/users/:userId` використовується **middleware аутентифікації**.  
-> Потрібен заголовок: `Authorization: Bearer test`  
-> Якщо заголовка немає → **401** `Access denied. No credentials sent.`
+- **Призначення:** відобразити деталі конкретного користувача.
+- **Template engine:** PUG
+- **View:** src/views/users/details.pug
+- **Controller:** getUserById
+- **Render:**
 
-#### GET `/users`
+```js
+return res.status(200).render("users/details.pug", {
+  title: `User #${userId}`,
+  user,
+});
+```
 
-- **Призначення:** отримати список користувачів.
-- **Middleware:** `basicAuth`
-- **Відповідь (200):** `Get users route` (або список користувачів, якщо реалізовано fake DB)
+- **Умови:**якщо користувач з таким userId не знайдений -> повертається текст: 404 User not found: {userId}
+- **Приклад URL:** http://localhost:3000/users/1
 
-#### POST `/users`
+## 2) Articles pages (EJS)
 
-- **Призначення:** створити нового користувача.
-- **Middleware:** `basicAuth` + `validateUserBody`
-- **Вимоги до Body (JSON):**
-  ```json
-  { "username": "john", "password": "123" }
-  ```
-- **Помилки:** 400 Missing required fields: username and password (якщо не передано поля)
-- **Відповідь (201/200):** Post users route / User created: ...
+### 2.1 GET /articles
 
-#### GET `/users/:userId`
+- **Призначення:** відобразити список статей у вигляді HTML сторінки.
+- **Template engine:** EJS
+- **View:** src/views/articles/index.ejs
+- **Controller:** getArticles
+- **Render:**
 
-- **Призначення:** отримати користувача за userId.
-- **Middleware:** basicAuth (+ validateIdParam за потреби)
-- **Параметри:** userId — ідентифікатор користувача (з URL)
-- **Помилки:** 404 User not found: {userId} (якщо користувача немає)
-- **Відповідь (200):** Get user by Id route: {userId}
+```js
+return res.status(200).render("articles/index.ejs", {
+  title: "Articles",
+  articles,
+});
+```
 
-#### PUT `/users/:userId`
+- **Що бачить користувач у браузері:**
+- заголовок Articles
+- список статей (title + id)
+- посилання на деталі /articles/:articleId
+- **Приклад URL:** http://localhost:3000/articles
 
-- **Призначення:** оновити користувача за userId.
-- **Middleware:** basicAuth + validateUserBody (+ validateIdParam)
-- **Параметри:** userId — ідентифікатор користувача (з URL)
-- **Вимоги до Body (JSON):** { "username": "newname", "password": "newpass" }
-- **Помилки:** 400 Missing required fields: username and password, 404 User not found: {userId} (якщо користувача немає)
-- **Відповідь (200):** Put user by Id route: {userId}
+### 2.2 GET /articles/:articleId
 
-#### DELETE `/users/:userId`
+- **Призначення:** відобразити деталі конкретної статті.
+- **Template engine:** EJS
+- **View:** src/views/articles/details.ejs
+- **Controller:** getArticleById
+- **Render:**
 
-- **Призначення:** видалити користувача за userId.
-- **Middleware:** basicAuth (+ validateIdParam)
-- **Параметри:** userId — ідентифікатор користувача (з URL)
-- **Помилки:** 404 User not found: {userId} (якщо користувача немає)
-- **Відповідь (200):** Delete user by Id route: {userId}
+```js
+return res.status(200).render("articles/details.ejs", {
+  title: `Article #${articleId}`,
+  article,
+});
+```
 
-### 3) Articles
-
-> Для всіх маршрутів `/articles` та `/articles/:articleId` використовується middleware перевірки доступу.
-> Потрібен заголовок: `X-ROLE: admin` або `X-ROLE: editor`
-> Якщо роль не підходить → **403** `Forbidden. Not enough permissions to access articles.`
-
-#### GET `/articles`
-
-- **Призначення:** отримати список статей.
-- **Middleware:** requireArticleAccess
-- **Відповідь (200):** Get articles route
-
-#### POST `/articles`
-
-- **Призначення:** створити нову статтю.
-- **Middleware:** requireArticleAccess
-- **Відповідь (201/200):** Post articles route / Article created: ... (залежить від реалізації контролера)
-
-#### GET `/articles/:articleId`
-
-- **Призначення:** отримати статтю за articleId.
-- **Middleware:** requireArticleAccess (+ validateIdParam)
-- **Параметри:** articleId — ідентифікатор статті (з URL)
-- **Помилки:** 404 Article not found: {articleId}
-- **Відповідь (200):** Get article by Id route: {articleId}
-
-#### PUT `/articles/:articleId`
-
-- **Призначення:** оновити статтю за articleId.
-- **Middleware:** requireArticleAccess (+ validateIdParam)
-- **Параметри:** articleId — ідентифікатор статті (з URL)
-- **Body (опційно):** { "title": "New title" }
-- **Помилки:** 404 Article not found: {articleId}
-- **Відповідь (200):** Put article by Id route: {articleId}
-
-#### DELETE `/articles/:articleId`
-
-- **Призначення:** видалити статтю за articleId.
-- **Middleware:** requireArticleAccess (+ validateIdParam)
-- **Параметри:** articleId — ідентифікатор статті (з URL)
-- **Помилки:** 404 Article not found: {articleId}
-- **Відповідь (200):** Delete article by Id route: {articleId}
+- _Умови:_ якщо стаття з таким articleId не знайдена -> повертається текст: 404 Article not found: {articleId}
+- **Приклад URL:** http://localhost:3000/articles/1

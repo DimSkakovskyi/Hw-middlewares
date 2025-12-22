@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="uk">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>
+    <%= title %>
+  </title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+  <div class="container">
+    <h1>Article details</h1>
+    <p class="subtitle">Деталі статті (EJS)</p>
+
+    <% if (!article) { %>
+      <p>Статтю не передано у шаблон.</p>
+      <% } else { %>
+        <div class="card">
+          <p><b>ID:</b>
+            <%= article.id %>
+          </p>
+          <p><b>Title:</b>
+            <%= article.title %>
+          </p>
+          <p><b>AuthorId:</b>
+            <%= article.authorId %>
+          </p>
+        </div>
+        <% } %>
+
+          <div class="nav">
+            <a class="btn" href="/articles">Назад до списку</a>
+            <a class="btn" href="/users">До користувачів</a>
+          </div>
+  </div>
+</body>
+
+</html>
