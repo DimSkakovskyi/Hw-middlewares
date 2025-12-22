@@ -10,13 +10,11 @@ const {
   deleteUserById
 } = require("../controllers/users.controller");
 
-router.use(basicAuth);
-
 router.get("/", getUsers);
-router.post("/", validateUserBody, postUsers);
-
 router.get("/:userId", validateIdParam("userId"), getUserById);
-router.put("/:userId", validateIdParam("userId"), validateUserBody, putUserById);
-router.delete("/:userId", validateIdParam("userId"), deleteUserById);
+
+router.post("/", basicAuth, validateUserBody, postUsers);
+router.put("/:userId", basicAuth, validateIdParam("userId"), validateUserBody, putUserById);
+router.delete("/:userId", basicAuth, validateIdParam("userId"), deleteUserById);
 
 module.exports = router;

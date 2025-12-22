@@ -1,0 +1,26 @@
+doctype html
+html(lang="uk")
+  head
+    meta(charset="utf-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1")
+    title= title
+    link(rel="stylesheet", href="/style.css")
+  body
+    .container
+      h1 User details
+      p.subtitle Деталі користувача (PUG)
+
+      if !user
+        p Користувача не передано у шаблон.
+      else
+        .card
+          p
+            b ID:
+            |  #{user.id}
+          p
+            b Username:
+            |  #{user.username}
+
+      .nav
+        a.btn(href="/users") Назад до списку
+        a.btn(href="/articles") До статей

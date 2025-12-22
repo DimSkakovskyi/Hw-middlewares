@@ -1,0 +1,23 @@
+doctype html
+html(lang="uk")
+  head
+    meta(charset="utf-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1")
+    title= title
+    link(rel="stylesheet", href="/style.css")
+  body
+    .container
+      h1 Users
+      p.subtitle Список користувачів (PUG)
+
+      if !users || users.length === 0
+        p Немає користувачів для відображення.
+      else
+        ul.list
+          each u in users
+            li.list-item
+              a(href=`/users/${u.id}`) #{u.username} (id: #{u.id})
+
+      .nav
+        a.btn(href="/") На головну
+        a.btn(href="/articles") До статей
