@@ -4,7 +4,7 @@ const { logRequests } = require("../middlewares/logRequests");
 router.use(logRequests);
 
 router.get("/", (req, res) => {
-  res.type("text").send("Get root route");
+  return res.type("text").send("Get root route");
 });
 
 module.exports = router;

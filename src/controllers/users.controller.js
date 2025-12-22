@@ -1,75 +1,77 @@
 const { users } = require("../data/users.data");
 
 function getUsers(req, res) {
-  res.type("text").status(200).send(JSON.stringify(users, null, 2));
+  return res.status(200).render("users/index.pug", {
+    title: "Users",
+    users
+  });
+}
+
+function getUserById(req, res) {
+  const { userId } = req.params;
+  const user = users.find((u) => u.id === userId);
+
+  if (!user) {
+    return res.status(404).type("text").send(`User not found: ${userId}`);
+  }
+
+  return res.status(200).render("users/details.pug", {
+    title: `User #${userId}`,
+    user
+  });
 }
 
 function postUsers(req, res) {
   const { username, password } = req.body;
 
-  const newUser = {
-    id: String(Date.now()),
-    username,
-    password
-  };
-
+  const id = String(Date.now());
+  const newUser = { id, username, password };
   users.push(newUser);
 
-  res
-    .type("text")
+  return res
     .status(201)
-    .send(`User created: ${JSON.stringify(newUser)}`);
-}
-
-function getUserById(req, res) {
-  const { userId } = req.params;
-  const user = users.find(u => u.id === userId);
-
-  if (!user) {
-    return res.type("text").status(404).send(`User not found: ${userId}`);
-  }
-
-  res.type("text").status(200).send(`Get user by Id route: ${userId}\n${JSON.stringify(user)}`);
+    .type("text")
+    .send(`Post users route\nCreated: ${JSON.stringify(newUser)}`);
 }
 
 function putUserById(req, res) {
   const { userId } = req.params;
   const { username, password } = req.body;
 
-  const user = users.find(u => u.id === userId);
+  const user = users.find((u) => u.id === userId);
   if (!user) {
-    return res.type("text").status(404).send(`User not found: ${userId}`);
+    return res.status(404).type("text").send(`User not found: ${userId}`);
   }
 
   user.username = username;
   user.password = password;
 
-  res
-    .type("text")
+  return res
     .status(200)
+    .type("text")
     .send(`Put user by Id route: ${userId}\nUpdated: ${JSON.stringify(user)}`);
 }
 
 function deleteUserById(req, res) {
   const { userId } = req.params;
-  const index = users.findIndex(u => u.id === userId);
+  const index = users.findIndex((u) => u.id === userId);
 
   if (index === -1) {
-    return res.type("text").status(404).send(`User not found: ${userId}`);
+    return res.status(404).type("text").send(`User not found: ${userId}`);
   }
 
   const deleted = users.splice(index, 1)[0];
 
-  res
-    .type("text")
+  return res
     .status(200)
+    .type("text")
     .send(`Delete user by Id route: ${userId}\nDeleted: ${JSON.stringify(deleted)}`);
 }
 
 module.exports = {
   getUsers,
-  postUsers,
   getUserById,
+  postUsers,
   putUserById,
   deleteUserById
 };

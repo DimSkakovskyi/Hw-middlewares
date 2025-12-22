@@ -6,7 +6,18 @@ const articlesRoutes = require("./routes/articles.routes");
 
 const { notFoundHandler, errorHandler } = require("./middlewares/errorHandlers");
 
+const path = require("path");
+const ejs = require("ejs");
+
 const app = express();
+
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, "..", "public"))); //CSS
+
+app.set("views", path.join(__dirname, "views"));
+app.set("view engine", "pug");
+
+app.engine("ejs", ejs.__express);
 
 app.use(express.json());
 

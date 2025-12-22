@@ -1,5 +1,5 @@
 function getRoot(req, res) {
-  res.send("Get root route");
+  return res.json({ message: "Get root route" });
 }
 
 module.exports = { getRoot };
