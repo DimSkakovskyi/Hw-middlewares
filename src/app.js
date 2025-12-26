@@ -3,6 +3,7 @@ const express = require("express");
 const rootRoutes = require("./routes/root.routes");
 const usersRoutes = require("./routes/users.routes");
 const articlesRoutes = require("./routes/articles.routes");
+const cookieParser = require("cookie-parser");
 
 const { notFoundHandler, errorHandler } = require("./middlewares/errorHandlers");
 
@@ -11,6 +12,7 @@ const ejs = require("ejs");
 
 const app = express();
 
+app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "..", "public"))); //CSS
 
