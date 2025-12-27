@@ -1,7 +1,10 @@
 const { articles } = require("../data/articles.data");
 
 function getArticles(req, res) {
+  const theme = req.cookies.theme || "light";
+
   return res.status(200).render("articles/index.ejs", {
+    theme: theme,
     title: "Articles",
     articles
   });
@@ -10,12 +13,14 @@ function getArticles(req, res) {
 function getArticleById(req, res) {
   const { articleId } = req.params;
   const article = articles.find((a) => a.id === articleId);
+  const theme = req.cookies.theme || "light";
 
   if (!article) {
     return res.status(404).type("text").send(`Article not found: ${articleId}`);
   }
 
   return res.status(200).render("articles/details.ejs", {
+    theme: theme,
     title: `Article #${articleId}`,
     article
   });

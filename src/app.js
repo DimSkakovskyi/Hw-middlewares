@@ -4,6 +4,7 @@ const rootRoutes = require("./routes/root.routes");
 const usersRoutes = require("./routes/users.routes");
 const articlesRoutes = require("./routes/articles.routes");
 const cookieParser = require("cookie-parser");
+const themeRoutes = require("./routes/theme.routes");
 
 const { notFoundHandler, errorHandler } = require("./middlewares/errorHandlers");
 
@@ -24,6 +25,7 @@ app.engine("ejs", ejs.__express);
 app.use(express.json());
 
 app.use("/", rootRoutes);
+app.use("/theme", themeRoutes);
 app.use("/users", usersRoutes);
 app.use("/articles", articlesRoutes);
 

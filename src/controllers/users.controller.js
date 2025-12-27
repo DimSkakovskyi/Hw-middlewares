@@ -1,7 +1,10 @@
 const { users } = require("../data/users.data");
 
 function getUsers(req, res) {
+  const theme = req.cookies.theme || "light";
+
   return res.status(200).render("users/index.pug", {
+    theme: theme,
     title: "Users",
     users
   });
@@ -10,12 +13,14 @@ function getUsers(req, res) {
 function getUserById(req, res) {
   const { userId } = req.params;
   const user = users.find((u) => u.id === userId);
+  const theme = req.cookies.theme || "light";
 
   if (!user) {
     return res.status(404).type("text").send(`User not found: ${userId}`);
   }
 
   return res.status(200).render("users/details.pug", {
+    theme: theme,
     title: `User #${userId}`,
     user
   });
