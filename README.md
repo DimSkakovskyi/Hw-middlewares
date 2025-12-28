@@ -264,6 +264,3 @@ body(class=theme)
 
 ---
 
-## Автор
-
-Лабораторне завдання: Express + PUG/EJS + Cookies + JWT + Static files.
