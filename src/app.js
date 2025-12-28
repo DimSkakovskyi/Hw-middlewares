@@ -1,10 +1,13 @@
 const express = require("express");
+require("dotenv").config();
 
 const rootRoutes = require("./routes/root.routes");
 const usersRoutes = require("./routes/users.routes");
 const articlesRoutes = require("./routes/articles.routes");
 const cookieParser = require("cookie-parser");
 const themeRoutes = require("./routes/theme.routes");
+const authRoutes = require("./routes/auth.routes");
+const protectedRoutes = require("./routes/protected.routes");
 
 const { notFoundHandler, errorHandler } = require("./middlewares/errorHandlers");
 
@@ -28,6 +31,8 @@ app.use("/", rootRoutes);
 app.use("/theme", themeRoutes);
 app.use("/users", usersRoutes);
 app.use("/articles", articlesRoutes);
+app.use("/auth", authRoutes);
+app.use("/protected", protectedRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

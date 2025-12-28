@@ -1,115 +1,269 @@
-# PUG + EJS
+# Static Favicon + Cookies (Theme) + JWT Auth
 
-Навчальний сервер на **Node.js + Express.js** p шаблонізаторами:
+Проєкт на **Node.js + Express.js**, який демонструє:
 
-- **PUG** для сторінок користувачів: `/users`, `/users/:userId`
-- **EJS** для сторінок статей: `/articles`, `/articles/:articleId`
-- Статичні файли (CSS) через `express.static`
+- роботу зі **статичними файлами** (favicon),
+- збереження налаштувань користувача через **cookies** (улюблена тема),
+- **авторизацію через JWT** з токеном у **httpOnly cookies**,
 
-Сервер слухає порт **3000** (або `process.env.PORT`, якщо заданий).
+---
 
-## Запуск проєкту
+## Технології
 
-### 1) Встановлення залежностей
+- Node.js, Express.js
+- Шаблони: **PUG** (users) + **EJS** (articles)
+- Cookies: `cookie-parser`
+- JWT: `jsonwebtoken`
+- Env: `dotenv`
+
+---
+
+## Встановлення та запуск
+
+### 1) Клонування та встановлення
 
 ```bash
-   npm install
+npm install
 ```
 
-### 2) Запуск сервера
+### 2) Налаштування `.env`
+
+Створи файл `.env` в корені проєкту:
+
+```env
+PORT=3000
+JWT_SECRET=your_secret_here
+JWT_EXPIRES_IN=2h
+```
+
+> **JWT_SECRET** має бути довгим випадковим рядком.
+> Приклад генерації:
+>
+> ```bash
+> node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+> ```
+
+### 3) Запуск
 
 ```bash
 npm start
 ```
 
-### 3) Запуск у dev-режимі (якщо є nodemon)
+або (якщо є dev-скрипт)
 
 ```bash
 npm run dev
 ```
 
 Після запуску сервер доступний за адресою:
-http://localhost:3000
 
-## 1) Users pages (PUG)
+- `http://localhost:3000`
 
-### 1.1 `GET /users`
+---
 
-- **Призначення:** відобразити список користувачів у вигляді HTML сторінки.
-- **Template engine:** PUG
-- **View:** `src/views/users/index.pug`
-- **Controller:** `getUsers`
-- **Render:**
+## Статичні файли (favicon)
 
-```js
-return res.status(200).render("users/index.pug", {
-  title: "Users",
-  users,
-});
+### Де лежить favicon
+
+Файл іконки:
+
+- `public/favicon.ico`
+
+### Як працює
+
+Express налаштований на видачу статичних файлів через `express.static(...)`,
+тому favicon автоматично доступний за URL:
+
+- `GET /favicon.ico`
+
+### Додавання favicon у PUG та EJS
+
+Оскільки у проєкті **немає `layout.pug` / `layout.ejs`**, тег favicon додається **в кожен шаблон окремо**:
+
+**PUG (в `<head>`):**
+
+```pug
+link(rel="icon", href="/favicon.ico")
 ```
 
-**Що бачить користувач у браузері:**
+**EJS (в `<head>`):**
 
-- заголовок Users
-- список користувачів (username + id)
-- посилання на сторінку деталей /users/:userId
-- **Приклад URL:** http://localhost:3000/users
-
-### 1.2 GET `/users/:userId`
-
-- **Призначення:** відобразити деталі конкретного користувача.
-- **Template engine:** PUG
-- **View:** src/views/users/details.pug
-- **Controller:** getUserById
-- **Render:**
-
-```js
-return res.status(200).render("users/details.pug", {
-  title: `User #${userId}`,
-  user,
-});
+```html
+<link rel="icon" href="/favicon.ico" />
 ```
 
-- **Умови:**якщо користувач з таким userId не знайдений -> повертається текст: 404 User not found: {userId}
-- **Приклад URL:** http://localhost:3000/users/1
+---
 
-## 2) Articles pages (EJS)
+## Cookies (збереження теми)
 
-### 2.1 GET /articles
+### Мета
 
-- **Призначення:** відобразити список статей у вигляді HTML сторінки.
-- **Template engine:** EJS
-- **View:** src/views/articles/index.ejs
-- **Controller:** getArticles
-- **Render:**
+Користувач може обрати тему (`light` або `dark`), і вона зберігається в cookie `theme`.
 
-```js
-return res.status(200).render("articles/index.ejs", {
-  title: "Articles",
-  articles,
-});
+### Як застосовується тема
+
+Під час рендеру сторінок сервер читає cookie:
+
+- `req.cookies.theme || "light"`
+  і передає `theme` у шаблон, щоб додати клас до `<body>`:
+
+**PUG:**
+
+```pug
+body(class=theme)
 ```
 
-- **Що бачить користувач у браузері:**
-- заголовок Articles
-- список статей (title + id)
-- посилання на деталі /articles/:articleId
-- **Приклад URL:** http://localhost:3000/articles
+**EJS:**
 
-### 2.2 GET /articles/:articleId
-
-- **Призначення:** відобразити деталі конкретної статті.
-- **Template engine:** EJS
-- **View:** src/views/articles/details.ejs
-- **Controller:** getArticleById
-- **Render:**
-
-```js
-return res.status(200).render("articles/details.ejs", {
-  title: `Article #${articleId}`,
-  article,
-});
+```ejs
+<body class="<%= theme %>">
 ```
 
-- _Умови:_ якщо стаття з таким articleId не знайдена -> повертається текст: 404 Article not found: {articleId}
-- **Приклад URL:** http://localhost:3000/articles/1
+---
+
+## JWT Авторизація (httpOnly cookie)
+
+### Мета
+
+- `POST /auth/register` — реєстрація, створення JWT
+- `POST /auth/login` — логін, створення JWT
+- токен зберігається у cookie **`token`** з прапорцем **httpOnly**
+- `GET /protected` — приклад захищеного маршруту (доступ лише з валідним JWT)
+
+> `httpOnly` означає, що JavaScript у браузері не може прочитати токен напряму (`document.cookie`), що підвищує безпеку.
+
+---
+
+## Маршрути
+
+> Нижче наведено типову карту маршрутів. Назви можуть відрізнятися, якщо в проєкті роутери підключені інакше, але логіка та вимоги — саме такі.
+
+### 1) Сторінки (PUG / EJS)
+
+#### Users (PUG)
+
+- `GET /users` — сторінка зі списком користувачів (PUG)
+- `GET /users/:id` — деталі користувача (PUG)
+
+#### Articles (EJS)
+
+- `GET /articles` — сторінка зі списком статей (EJS)
+- `GET /articles/:articleId` — деталі статті (EJS)
+
+---
+
+### 2) Theme (cookies)
+
+#### Встановити тему
+
+- **POST `/theme`**
+- Body (JSON):
+
+```json
+{ "theme": "dark" }
+```
+
+Очікувано:
+
+- `200 OK`
+- у Response Headers буде `Set-Cookie: theme=dark; ...`
+
+#### Отримати поточну тему
+
+- **GET `/theme`**
+- Response:
+
+```json
+{ "theme": "dark" }
+```
+
+---
+
+### 3) Auth (JWT)
+
+#### Реєстрація
+
+- **POST `/auth/register`**
+- Body (JSON):
+
+```json
+{ "email": "test@test.com", "password": "123" }
+```
+
+Очікувано:
+
+- `201/200`
+- `Set-Cookie: token=...; HttpOnly; ...`
+
+#### Логін
+
+- **POST `/auth/login`**
+- Body (JSON):
+
+```json
+{ "email": "test@test.com", "password": "123" }
+```
+
+Очікувано:
+
+- `200`
+- `Set-Cookie: token=...; HttpOnly; ...`
+
+#### Вихід (очистка cookie)
+
+- **POST `/auth/logout`**
+  Очікувано:
+- `200`
+- cookie `token` очищується
+
+---
+
+### 4) Protected (JWT middleware)
+
+#### Захищений маршрут
+
+- **GET `/protected`**
+  Очікувано:
+- без cookie `token` → `401 Unauthorized`
+- з валідним cookie `token` → `200 OK`
+
+Приклад відповіді:
+
+```json
+{
+  "message": "Protected OK",
+  "user": { "id": 1, "email": "test@test.com" }
+}
+```
+
+---
+
+## Перевірка через Postman (коротко)
+
+1. **POST** `http://localhost:3000/auth/register` (або `/auth/login`)  
+   Body → raw → JSON:
+
+   ```json
+   { "email": "test@test.com", "password": "123" }
+   ```
+
+   Перевірити у **Response Headers**: `Set-Cookie: token=...; HttpOnly`
+
+2. Postman автоматично збереже cookie для `localhost`.  
+   Далі **GET** `http://localhost:3000/protected` → має бути `200 OK`.
+
+> Не додавай `Set-Cookie` вручну в Headers запиту — це заголовок відповіді сервера.
+
+---
+
+## Примітки
+
+- `.env` **не можна пушити** у GitHub. Додай його в `.gitignore`.
+- Для продакшна `secure: true` для cookies вмикається лише на HTTPS.
+- Якщо favicon “не видно” у вкладці браузера — зроби `Ctrl+Shift+R` (hard reload) або додай `?v=2` до `href` (щоб пробити кеш).
+
+---
+
+## Автор
+
+Лабораторне завдання: Express + PUG/EJS + Cookies + JWT + Static files.
