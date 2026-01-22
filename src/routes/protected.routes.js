@@ -1,7 +1,8 @@
+// src/routes/protected.routes.js
 const router = require("express").Router();
-const { authJwt } = require("../middlewares/authJwt");
+const ensureAuth = require("../middlewares/ensureAuth");
 
-router.get("/", authJwt, (req, res) => {
+router.get("/", ensureAuth, (req, res) => {
   return res.json({ message: "Protected OK", user: req.user });
 });
 
