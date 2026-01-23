@@ -1,7 +1,17 @@
-# Passport (Local) + Sessions + /protected
+# Express + Passport + MongoDB Atlas (Read)
 
-Цей проєкт показує авторизацію в **Node.js + Express.js** через **Passport** (LocalStrategy: email + password) та **сесії** (`express-session`).
-Після входу користувача створюється сесія, а її id зберігається в cookie (`connect.sid`) з налаштуванням **httpOnly** та **secure** (у production).
+Це продовження проєкту з авторизацією через **Passport**. У цьому завданні додано підключення до **MongoDB Atlas** та реалізовано **операцію читання даних** з бази з відображенням на сторінці сервера.
+
+---
+
+## Технології
+
+- Node.js
+- Express.js
+- Passport (LocalStrategy) + express-session (з попереднього завдання)
+- MongoDB Atlas
+- Mongoose (для роботи з MongoDB)
+- Views: PUG / EJS
 
 ---
 
@@ -11,25 +21,60 @@
 npm install
 ```
 
+Додатково переконайся, що встановлено:
+
+```bash
+npm i mongoose
+```
+
 ---
 
-## Налаштування `.env`
+## Налаштування MongoDB Atlas
 
-Створи файл **.env** в корені проєкту:
+### 1) Створи кластер в MongoDB Atlas
+
+Atlas → Database → Create Cluster (Free tier підійде).
+
+### 2) Створи Database User
+
+Atlas → **Security → Database Access** → **Add New Database User**
+
+- Username + Password
+- Role: `Read and write to any database` (для навчальної роботи)
+
+### 3) Додай доступ по IP
+
+Atlas → **Security → Network Access** → **Add IP Address**
+
+- Для тесту можна `0.0.0.0/0` (Allow access from anywhere)
+
+### 4) Візьми connection string
+
+Atlas → Database → Connect → **Drivers** → скопіюй URI виду:
+
+```
+mongodb+srv://<USER>:<PASSWORD>@<CLUSTER>/<DB_NAME>?retryWrites=true&w=majority
+```
+
+---
+
+## Файл `.env`
+
+Створи `.env` у корені проєкту та додай змінні:
 
 ```env
 PORT=3000
+
+# Passport sessions (з попереднього завдання)
 SESSION_SECRET=your_long_random_secret
 NODE_ENV=development
+
+# MongoDB Atlas
+MONGODB_URI=mongodb+srv://USER:PASSWORD@CLUSTER.mongodb.net/DB_NAME?retryWrites=true&w=majority
 ```
 
-Як згенерувати секрет:
-
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-
-> Якщо поставити `NODE_ENV=production`, то cookie буде `secure=true` і працюватиме лише на HTTPS.
+> Якщо в паролі є символи `@ : / ? # & %` — краще зробити пароль без спецсимволів,
+> або застосувати URL-encoding.
 
 ---
 
@@ -45,60 +90,36 @@ npm start
 npm run dev
 ```
 
-Сервер: `http://localhost:3000`
+Сервер запуститься за адресою:
+
+- `http://localhost:3000`
 
 ---
 
-## Як працює
+## Нова функціональність (читання з MongoDB)
 
-- Passport LocalStrategy перевіряє **email + password**.
-- Пароль зберігається **хешовано** (bcryptjs), не у відкритому вигляді.
-- `serializeUser` зберігає в сесії **user.id**.
-- `deserializeUser` відновлює користувача і додає його в `req.user`.
-- Захищений маршрут `/protected` доступний тільки якщо `req.isAuthenticated()` = true.
+### Маршрут читання та відображення даних
 
----
+**GET `/db/articles`**
 
-## Маршрути
+- робить запит до MongoDB Atlas (колекція `articles`)
+- отримує список документів (приклад: останні 20)
+- відображає їх на сторінці сервера (PUG view)
 
-### Авторизація
+Відкрити в браузері:
 
-**POST `/auth/register`** — реєстрація + автоматичний логін (створюється сесія)
+- `http://localhost:3000/db/articles`
 
-Body (JSON):
-
-```json
-{ "email": "test@test.com", "password": "123" }
-```
-
-**POST `/auth/login`** — вхід через Passport
-
-Body (JSON):
-
-```json
-{ "email": "test@test.com", "password": "123" }
-```
-
-**POST `/auth/logout`** — вихід (сесія видаляється, cookie очищується)
-
-**GET `/auth/me`** — повертає поточного користувача (якщо авторизований)
+Якщо колекція порожня — сторінка покаже, що даних немає.
 
 ---
 
-### Захищений маршрут
+## Структура (ключові файли)
 
-**GET `/protected`**
-
-- без сесії → `401 Unauthorized`
-- після login/register → `200 OK`
+- `src/db/mongo.js` — підключення до MongoDB Atlas
+- `src/models/Article.js` — модель `Article` (колекція `articles`)
+- `src/controllers/db.controller.js` — логіка читання з MongoDB і передача у view
+- `src/routes/db.routes.js` — маршрут `/db/articles`
+- `src/views/db/articles.pug` — сторінка для відображення даних
 
 ---
-
-## Перевірка через Postman (швидко)
-
-1. POST `/auth/register` або POST `/auth/login`
-2. GET `/protected` → має бути 200
-3. POST `/auth/logout`
-4. GET `/protected` → має бути 401
-
-> Postman сам зберігає cookies для `localhost`.

@@ -14,6 +14,7 @@ const usersRoutes = require("./routes/users.routes.js");
 const articlesRoutes = require("./routes/articles.routes.js");
 const authRoutes = require("./routes/auth.routes.js");
 const protectedRoutes = require("./routes/protected.routes.js");
+const dbRoutes = require("./routes/db.routes");
 
 // middlewares (лежать у src/middlewares)
 const { notFoundHandler, errorHandler } = require("./middlewares/errorHandlers");
@@ -24,10 +25,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // static: public у корені
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "..", "public")));
+
 
 // views у src/views
-app.set("views", path.join(__dirname, "src", "views"));
+app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "pug");
 app.engine("ejs", ejs.__express);
 
@@ -61,6 +63,7 @@ app.use("/users", usersRoutes);
 app.use("/articles", articlesRoutes);
 app.use("/auth", authRoutes);
 app.use("/protected", protectedRoutes);
+app.use("/db", dbRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
