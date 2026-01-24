@@ -1,87 +1,47 @@
-const { articles } = require("../data/articles.data");
+const Article = require("../models/Article");
 
-function getArticles(req, res) {
-  const theme = req.cookies.theme || "light";
+// GET /articles?limit=20
+async function getArticles(req, res, next) {
+  try {
+    // limit з query: /articles?limit=10
+    let limit = parseInt(req.query.limit, 10);
 
-  return res.status(200).render("articles/index.ejs", {
-    theme: theme,
-    title: "Articles",
-    articles
-  });
-}
+    if (Number.isNaN(limit) || limit <= 0) limit = 20;
+    if (limit > 100) limit = 100;
 
-function getArticleById(req, res) {
-  const { articleId } = req.params;
-  const article = articles.find((a) => a.id === articleId);
-  const theme = req.cookies.theme || "light";
+    const articles = await Article.find({})
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
 
-  if (!article) {
-    return res.status(404).type("text").send(`Article not found: ${articleId}`);
+    return res.render("articles/index", {
+      title: "Articles",
+      articles,
+      limit
+    });
+  } catch (err) {
+    next(err);
   }
-
-  return res.status(200).render("articles/details.ejs", {
-    theme: theme,
-    title: `Article #${articleId}`,
-    article
-  });
 }
 
-function postArticles(req, res) {
-  const { title, authorId } = req.body || {};
+// GET /articles/:articleId
+async function getArticleById(req, res, next) {
+  try {
+    const { articleId } = req.params;
 
-  const id = String(Date.now());
-  const newArticle = {
-    id,
-    title: title || `New article ${id}`,
-    authorId: authorId || "1"
-  };
+    const article = await Article.findById(articleId).lean();
+    if (!article) return res.status(404).type("text").send("Article not found");
 
-  articles.push(newArticle);
-
-  return res
-    .status(201)
-    .type("text")
-    .send(`Post articles route\nCreated: ${JSON.stringify(newArticle)}`);
-}
-
-function putArticleById(req, res) {
-  const { articleId } = req.params;
-  const { title, authorId } = req.body || {};
-
-  const article = articles.find((a) => a.id === articleId);
-  if (!article) {
-    return res.status(404).type("text").send(`Article not found: ${articleId}`);
+    return res.render("articles/details", {
+      title: article.title || "Article",
+      article
+    });
+  } catch (err) {
+    next(err);
   }
-
-  if (title !== undefined) article.title = title;
-  if (authorId !== undefined) article.authorId = authorId;
-
-  return res
-    .status(200)
-    .type("text")
-    .send(`Put article by Id route: ${articleId}\nUpdated: ${JSON.stringify(article)}`);
-}
-
-function deleteArticleById(req, res) {
-  const { articleId } = req.params;
-  const index = articles.findIndex((a) => a.id === articleId);
-
-  if (index === -1) {
-    return res.status(404).type("text").send(`Article not found: ${articleId}`);
-  }
-
-  const deleted = articles.splice(index, 1)[0];
-
-  return res
-    .status(200)
-    .type("text")
-    .send(`Delete article by Id route: ${articleId}\nDeleted: ${JSON.stringify(deleted)}`);
 }
 
 module.exports = {
   getArticles,
-  postArticles,
-  getArticleById,
-  putArticleById,
-  deleteArticleById
+  getArticleById
 };

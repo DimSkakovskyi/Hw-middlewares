@@ -14,7 +14,6 @@ const usersRoutes = require("./routes/users.routes.js");
 const articlesRoutes = require("./routes/articles.routes.js");
 const authRoutes = require("./routes/auth.routes.js");
 const protectedRoutes = require("./routes/protected.routes.js");
-const dbRoutes = require("./routes/db.routes");
 
 // middlewares (лежать у src/middlewares)
 const { notFoundHandler, errorHandler } = require("./middlewares/errorHandlers");
@@ -63,7 +62,6 @@ app.use("/users", usersRoutes);
 app.use("/articles", articlesRoutes);
 app.use("/auth", authRoutes);
 app.use("/protected", protectedRoutes);
-app.use("/db", dbRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
