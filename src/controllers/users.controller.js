@@ -1,76 +1,139 @@
-const { users } = require("../data/users.data");
+const bcrypt = require("bcryptjs");
+const User = require("../models/User");
 
-function getUsers(req, res) {
-  const theme = req.cookies.theme || "light";
-
-  return res.status(200).render("users/index.pug", {
-    theme: theme,
-    title: "Users",
-    users
-  });
+// helper: theme (якщо cookies немає — просто light)
+function getTheme(req) {
+  return (req.cookies && req.cookies.theme) ? req.cookies.theme : "light";
 }
 
-function getUserById(req, res) {
-  const { userId } = req.params;
-  const user = users.find((u) => u.id === userId);
-  const theme = req.cookies.theme || "light";
+function sanitizeUser(u) {
+  if (!u) return u;
+  const { passwordHash, ...safe } = u;
+  return safe;
+}
 
-  if (!user) {
-    return res.status(404).type("text").send(`User not found: ${userId}`);
+// GET /users?limit=20
+async function getUsers(req, res, next) {
+  try {
+    const theme = getTheme(req);
+
+    let limit = parseInt(req.query.limit, 10);
+    if (Number.isNaN(limit) || limit <= 0) limit = 20;
+    if (limit > 100) limit = 100;
+
+    const users = await User.find({})
+      .select("username createdAt updatedAt")
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    return res.status(200).render("users/index.pug", {
+      theme,
+      title: "Users",
+      users
+    });
+  } catch (err) {
+    next(err);
   }
-
-  return res.status(200).render("users/details.pug", {
-    theme: theme,
-    title: `User #${userId}`,
-    user
-  });
 }
 
-function postUsers(req, res) {
-  const { username, password } = req.body;
+// GET /users/:userId
+async function getUserById(req, res, next) {
+  try {
+    const theme = getTheme(req);
+    const { userId } = req.params;
 
-  const id = String(Date.now());
-  const newUser = { id, username, password };
-  users.push(newUser);
+    const user = await User.findById(userId)
+      .select("username createdAt updatedAt")
+      .lean();
 
-  return res
-    .status(201)
-    .type("text")
-    .send(`Post users route\nCreated: ${JSON.stringify(newUser)}`);
-}
+    if (!user) {
+      return res.status(404).type("text").send(`User not found: ${userId}`);
+    }
 
-function putUserById(req, res) {
-  const { userId } = req.params;
-  const { username, password } = req.body;
-
-  const user = users.find((u) => u.id === userId);
-  if (!user) {
-    return res.status(404).type("text").send(`User not found: ${userId}`);
+    return res.status(200).render("users/details.pug", {
+      theme,
+      title: `User #${userId}`,
+      user
+    });
+  } catch (err) {
+    next(err);
   }
-
-  user.username = username;
-  user.password = password;
-
-  return res
-    .status(200)
-    .type("text")
-    .send(`Put user by Id route: ${userId}\nUpdated: ${JSON.stringify(user)}`);
 }
 
-function deleteUserById(req, res) {
-  const { userId } = req.params;
-  const index = users.findIndex((u) => u.id === userId);
+// POST /users  body: { username, password }
+async function postUsers(req, res, next) {
+  try {
+    const { username, password } = req.body || {};
 
-  if (index === -1) {
-    return res.status(404).type("text").send(`User not found: ${userId}`);
+    if (!username || !password) {
+      return res.status(400).json({ message: "username and password are required" });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ message: "password must be at least 6 characters" });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const created = await User.create({ username, passwordHash });
+
+    return res.status(201).json({
+      message: "User created",
+      user: sanitizeUser(created.toObject())
+    });
+  } catch (err) {
+    next(err);
   }
+}
 
-  const deleted = users.splice(index, 1)[0];
+// PUT /users/:userId  body: { username, password? }
+// Повна заміна документа (replaceOne). Якщо password не передали — залишаємо старий hash.
+async function putUserById(req, res, next) {
+  try {
+    const { userId } = req.params;
+    const { username, password } = req.body || {};
 
-  return res
-    .status(200)
-    .type("text")
-    .send(`Delete user by Id route: ${userId}\nDeleted: ${JSON.stringify(deleted)}`);
+    if (!username) {
+      return res.status(400).json({ message: "username is required" });
+    }
+
+    const existing = await User.findById(userId).lean();
+    if (!existing) {
+      return res.status(404).type("text").send(`User not found: ${userId}`);
+    }
+
+    let passwordHash = existing.passwordHash;
+    if (password) {
+      if (password.length < 6) {
+        return res.status(400).json({ message: "password must be at least 6 characters" });
+      }
+      passwordHash = await bcrypt.hash(password, 10);
+    }
+
+    const result = await User.replaceOne(
+      { _id: userId },
+      { username, passwordHash }
+    ); // replaceOne
+
+    return res.status(200).json({ message: "User replaced", result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// DELETE /users/:userId
+async function deleteUserById(req, res, next) {
+  try {
+    const { userId } = req.params;
+
+    const result = await User.deleteOne({ _id: userId });
+    if (result.deletedCount === 0) {
+      return res.status(404).type("text").send(`User not found: ${userId}`);
+    }
+
+    return res.status(200).json({ message: "User deleted", result });
+  } catch (err) {
+    next(err);
+  }
 }
 
 module.exports = {
