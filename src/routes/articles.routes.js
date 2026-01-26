@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const { requireArticleAccess } = require("../middlewares/articleAccess");
 const { validateIdParam } = require("../middlewares/validate");
+const { validateLimitQuery } = require("../middlewares/validateQuery");
 
 const {
   getArticles,
@@ -10,7 +11,7 @@ const {
   deleteArticleById
 } = require("../controllers/articles.controller");
 
-router.get("/", getArticles);
+router.get("/", validateLimitQuery(20, 100), getArticles);
 router.get("/:articleId", validateIdParam("articleId"), getArticleById);
 
 router.post("/", requireArticleAccess, postArticles);
