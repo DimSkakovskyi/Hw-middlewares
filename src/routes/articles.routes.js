@@ -15,13 +15,19 @@ const {
   replaceOneArticle,     // PUT /articles/:articleId
 
   deleteOneArticle,      // DELETE /articles/:articleId
-  deleteManyArticles     // DELETE /articles
+  deleteManyArticles,     // DELETE /articles
+
+  getArticlesCursor,
+  getArticlesStats
 } = require("../controllers/articles.controller");
 const { validateLimitQuery } = require("../middlewares/validateQuery");
 
 // READ
 router.get("/", validateLimitQuery(20, 100), getArticles);
+router.get("/cursor", getArticlesCursor);
+router.get("/stats", getArticlesStats);
 router.get("/:articleId", validateIdParam("articleId"), getArticleById);
+
 
 // CREATE
 router.post("/", requireArticleAccess, insertOneArticle);          // insertOne

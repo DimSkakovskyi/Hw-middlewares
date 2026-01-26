@@ -3,7 +3,8 @@ function notFoundHandler(req, res, next) {
 }
 
 function errorHandler(err, req, res, next) {
-  return res.status(500).type("text").send("Internal Server Error");
+  console.error("ERROR:", err); // <- додай
+  res.status(500).type("text").send("Internal Server Error");
 }
 
 module.exports = { notFoundHandler, errorHandler };

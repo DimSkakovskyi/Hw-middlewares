@@ -63,6 +63,80 @@ async function getArticleById(req, res, next) {
   }
 }
 
+// GET /articles/cursor?limit=100&fields=title,createdAt
+async function getArticlesCursor(req, res, next) {
+  try {
+    const limit = parseLimit(req.query.limit, 100, 5000);
+    const fields = parseFields(req.query.fields);
+
+    let q = Article.find({}).sort({ createdAt: -1 }).limit(limit);
+    if (fields) q = q.select(fields);
+
+    // cursor замість масиву:
+    const cursor = q.lean().cursor();
+
+    res.setHeader("Content-Type", "application/x-ndjson; charset=utf-8");
+
+    let sent = 0;
+    for await (const doc of cursor) {
+      res.write(JSON.stringify(doc) + "\n");
+      sent++;
+    }
+
+    res.end();
+  } catch (err) {
+    next(err);
+  }
+}
+
+// GET /articles/stats
+async function getArticlesStats(req, res, next) {
+  try {
+    const pipeline = [
+      {
+        $project: {
+          title: 1,
+          createdAt: 1,
+          textLen: {
+            $strLenCP: {
+              $toString: { $ifNull: ["$text", ""] }
+            }
+          }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          count: { $sum: 1 },
+          avgTextLength: { $avg: "$textLen" },
+          uniqueTitlesSet: { $addToSet: "$title" },
+          minCreatedAt: { $min: "$createdAt" },
+          maxCreatedAt: { $max: "$createdAt" }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          count: 1,
+          avgTextLength: 1,
+          uniqueTitles: { $size: "$uniqueTitlesSet" },
+          minCreatedAt: 1,
+          maxCreatedAt: 1
+        }
+      }
+    ];
+
+    const result = await Article.aggregate(pipeline);
+    const stats = result[0] || { count: 0, avgTextLength: 0, uniqueTitles: 0, minCreatedAt: null, maxCreatedAt: null };
+
+    stats.avgTextLength = Math.round((stats.avgTextLength || 0) * 100) / 100;
+
+    return res.json(stats);
+  } catch (err) {
+    next(err);
+  }
+}
+
 /* =========================
    CREATE (insertOne/Many)
 ========================= */
@@ -209,5 +283,8 @@ module.exports = {
   replaceOneArticle,
 
   deleteOneArticle,
-  deleteManyArticles
+  deleteManyArticles,
+
+  getArticlesCursor,
+  getArticlesStats
 };
