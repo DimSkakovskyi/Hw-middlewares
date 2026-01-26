@@ -1,130 +1,145 @@
-# MongoDB Atlas — Cursors + Aggregation
+# Docker + Docker Compose (Express + MongoDB)
 
-Це завдання є продовженням проєкту з інтеграцією **MongoDB Atlas**.  
-Мета — оптимізувати роботу з даними за допомогою **курсорів** та додати **агрегаційний запит** для отримання статистики.
-
----
-
-## Технології
-
-- Node.js
-- Express.js
-- MongoDB Atlas
-- Mongoose
+Мета: запустити Express-додаток у Docker контейнері та підключити його до MongoDB через Docker Compose. Також налаштувати `volumes`, щоб зміни в коді підхоплювались без ручного перезапуску контейнера.
 
 ---
 
-## Встановлення
+## Вимоги
+
+- Docker Desktop (або Docker Engine)
+- Docker Compose (вбудований у Docker Desktop)
+
+---
+
+## Файли
+
+У проєкті додані:
+
+- `Dockerfile`
+- `docker-compose.yml`
+- `.dockerignore`
+
+---
+
+## Dockerfile (коротко)
+
+- Використовується образ `node:lts`
+- Робоча директорія: `/app`
+- Встановлення залежностей через `npm install`
+- Відкритий порт `3000`
+- Запуск: `npm run dev` (nodemon)
+
+---
+
+## docker-compose.yml (коротко)
+
+Є 2 сервіси:
+
+- `app` — Express
+- `mongo` — MongoDB (офіційний образ)
+
+Основні налаштування:
+
+- Порт додатку: `3000:3000`
+- MongoDB: `mongo:27017`
+- Змінна середовища для підключення:
+  - `MONGODB_URI=mongodb://mongo:27017/appdb`
+- `depends_on`: додаток залежить від MongoDB
+- `volumes`: синхронізація коду з контейнером
+
+---
+
+## Як запустити
+
+У корені проєкту:
 
 ```bash
-npm install
+docker compose up --build
 ```
+
+Перевірка в браузері:
+
+- http://localhost:3000  
+  Очікувано: вітальне повідомлення (наприклад `Get root route`).
 
 ---
 
-## Налаштування `.env`
+## Hot reload (оновлення коду без перезапуску контейнера)
 
-```env
-PORT=3000
-MONGODB_URI=mongodb+srv://USER:PASSWORD@CLUSTER.mongodb.net/DB_NAME?retryWrites=true&w=majority
-```
+На Windows/macOS nodemon інколи не бачить зміни у файлах через Docker volumes.  
+Рішення: увімкнути **legacy watch / polling**.
 
----
+### 1) package.json
 
-## Запуск
-
-```bash
-npm start
-```
-
-або
-
-```bash
-npm run dev
-```
-
----
-
-## Нова функціональність
-
-### 1) Cursor (перебір документів без збереження в масив)
-
-Маршрут використовує **курсор** (`find().cursor()`), щоб перебирати документи по одному та не тримати весь набір в памʼяті.  
-Відповідь повертається у форматі **NDJSON**: кожен документ — окремий рядок JSON.
-
-#### GET `/articles/cursor`
-
-Query параметри:
-
-- `limit` — скільки документів віддати (за замовчуванням 100, максимум 5000)
-- `fields` — projection полів, наприклад `title,createdAt`
-
-Приклад:
-
-```
-GET /articles/cursor?limit=5&fields=title,createdAt
-```
-
-Очікувано:
-
-- `200 OK`
-- `Content-Type: application/x-ndjson`
-- 5 рядків JSON (кожен документ окремо)
-
----
-
-### 2) Aggregation (статистика по колекції)
-
-Маршрут використовує **aggregation pipeline** для отримання статистики без ручної обробки даних у JavaScript.
-
-#### GET `/articles/stats`
-
-Повертає:
-
-- `count` — кількість документів
-- `avgTextLength` — середня довжина поля `text`
-- `uniqueTitles` — кількість унікальних значень `title`
-- `minCreatedAt`, `maxCreatedAt` — мінімальна та максимальна дата створення (якщо поле є)
-
-Приклад:
-
-```
-GET /articles/stats
-```
-
-Очікувано (приклад):
+Онови `dev`-скрипт:
 
 ```json
-{
-  "count": 12,
-  "avgTextLength": 34.5,
-  "uniqueTitles": 10,
-  "minCreatedAt": "2026-01-01T10:00:00.000Z",
-  "maxCreatedAt": "2026-01-23T12:00:00.000Z"
-}
+"dev": "nodemon -L src/server.js"
+```
+
+### 2) docker-compose.yml (додатково, якщо треба)
+
+Додай змінні в сервіс `app`:
+
+```yaml
+environment:
+  - NODE_ENV=development
+  - CHOKIDAR_USEPOLLING=true
+  - CHOKIDAR_INTERVAL=1000
+  - NODEMON_LEGACY_WATCH=1
+```
+
+Після змін перезапусти контейнери:
+
+```bash
+docker compose down
+docker compose up --build
+```
+
+### Перевірка hot reload
+
+1. Зміни текст у root route (наприклад у `src/routes/root.routes.js`)
+2. Збережи файл
+3. У логах `docker compose` має бути перезапуск nodemon
+4. Онови сторінку в браузері — зміни мають відобразитись
+
+---
+
+## Перевірка MongoDB
+
+MongoDB запускається як окремий сервіс `mongo`.  
+Додаток підключається через:
+
+```
+mongodb://mongo:27017/appdb
+```
+
+Якщо потрібна перевірка вручну:
+
+```bash
+docker compose exec mongo mongosh
 ```
 
 ---
 
-## Як це покращує роботу сервера
+## Команди для тестування
 
-- **Cursor**: не завантажує всі документи в памʼять (краще для великих колекцій).
-- **Aggregation**: обчислення статистики виконується на стороні MongoDB, а не в Node.js.
+- Запуск:
 
----
+```bash
+docker compose up --build
+```
 
-## Тестування (Postman)
+- Зупинка:
 
-### Cursor
+```bash
+docker compose down
+```
 
-1. Створи запит **GET**:
-   `http://localhost:3000/articles/cursor?limit=5&fields=title,createdAt`
-2. Перевір, що відповідь йде як NDJSON (кілька JSON-рядків).
+- Перевірити логи:
 
-### Stats
-
-1. Створи запит **GET**:
-   `http://localhost:3000/articles/stats`
-2. Перевір, що повертається JSON зі статистикою.
+```bash
+docker compose logs -f app
+```
 
 ---
